@@ -244,6 +244,8 @@ ggplot(data=developers_top_10, aes(x=reorder(user_name, num_followers), y=num_fo
 
 ```
 
+![developers.jpg](https://github.com/David-Carrasco/Data_Analysis_Github/blob/master/screenshots/developers.jpg "Top 10 Developers")
+
 ### Top 10 repositorios agrupados por developer
 
 ```{r fig.width=12}
@@ -254,6 +256,8 @@ ggplot(data=repositories_top_10, aes(x=reorder(name_repo, stars_repo), y=stars_r
        theme(text = element_text(size=12)) + coord_flip()
 
 ```
+
+![repositories.jpg](https://github.com/David-Carrasco/Data_Analysis_Github/blob/master/screenshots/repos.jpg "Top Repositories")
 
 TODO:
 
