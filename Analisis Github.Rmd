@@ -27,7 +27,7 @@ curl.opts = list(userpwd = paste(user_github, pass_github, sep=':'), ssl.verifyp
                  useragent = 'curl', httpauth = 1L)
 ```
 
-## Carga librerías y declaración de constantes y funciones
+## Carga Librerías
 
 ```{r message=FALSE, warning=FALSE, results=FALSE}
 library(RCurl)
@@ -37,14 +37,14 @@ library(ggplot2)
 library(plotly)
 ```
 
-Constantes
+## Constantes
 
 ```{r}
 followers <- 300
 repos <- 1
 ```
 
-Definición de funciones
+##Definición de funciones
 
 **pagination**
 
