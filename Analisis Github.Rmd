@@ -17,8 +17,8 @@ Vamos a suponer que para ser un trending developer en R y/o Python se han de ten
 #### Indicar credenciales de usuario de github para poder ejecutar correctamente todo el script
 
 ```{r}
-user_github = '_____'
-pass_github = '_____'
+user_github = '_______'
+pass_github = '_______'
 ```
 
 Opciones para la conexión con la API a través de RCurl
@@ -250,7 +250,7 @@ ggplot(data=developers_top_10, aes(x=reorder(user_name, num_followers), y=num_fo
 repositories_top_10 <- repositories[1:10,]
 ggplot(data=repositories_top_10, aes(x=reorder(name_repo, stars_repo), y=stars_repo, fill=user_name)) + 
        geom_bar(stat="identity") + xlab("Repositories") + ylab("Stars") + 
-       ggtitle("Top 10 repositories which top 10 developers are working on") +
+       ggtitle("Top 10 repositories by stars of top developers") +
        theme(text = element_text(size=12)) + coord_flip()
 
 ```
