@@ -1,0 +1,279 @@
+---
+title: "Análisis developers github"
+output: html_document
+---
+
+Vamos a analizar los developers registrados en github más populares para los lenguajes R y Python
+con el objetivo de estar informados de quiénes son los máximos influyentes en ambos lenguajes.
+
+Vamos a suponer que para ser un trending developer en R y/o Python se han de tener al menos 300 followers y al menos 1 repositorio creado.
+
+***Autenticarse en github para lanzar el script ya que hay limitaciones en el uso de la API:***
+
+* https://developer.github.com/v3/#rate-limiting
+* ***For requests using Basic Authentication or OAuth, you can make up to 5,000 requests per hour.*** 
+* ***For unauthenticated requests, the rate limit allows you to make up to 60 requests per hour.***
+
+#### Indicar credenciales de usuario de github para poder ejecutar correctamente todo el script
+
+```{r}
+user_github = 'david-carrasco'
+pass_github = 'davecray5250'
+```
+
+Opciones para la conexión con la API a través de RCurl
+```{r}
+curl.opts = list(userpwd = paste(user_github, pass_github, sep=':'), ssl.verifypeer = FALSE, 
+                 useragent = 'curl', httpauth = 1L)
+```
+
+## Carga Librerías
+
+```{r message=FALSE, warning=FALSE, results=FALSE}
+library(RCurl)
+library(rjson)
+library(plyr)
+library(ggplot2)
+library(plotly)
+```
+
+## Constantes
+
+```{r}
+followers <- 300
+repos <- 1
+```
+
+##Definición de funciones
+
+**pagination**
+
+* Devuelve el resultado de la query de url_paginar ya que la API muestra un máximo de 100 resultados por página
+
+```{r}
+pagination <- function(url_paginar, num_page){
+  nueva_pagina <- gsub('&page=(\\d+)', paste('&page=', as.character(num_page), sep=''), url_paginar)
+  results_page <- fromJSON(getURL(nueva_pagina, .opts = curl.opts))
+  return(results_page)
+}
+```
+
+**top_developers_by_language**
+
+* Args:
+    + programming_language: Lenguaje de programación por el que buscar
+    + min_followers: Condición para la query como mínimo de followers
+    + min_repos : Condición para la query como mínimo de repositorios
+* Return:
+    + Devuelve lista ordenada por numero de followers con los top developers por el programming_language
+* API:
+    + https://developer.github.com/v3/search/#search-code
+
+```{r}
+top_developers_by_language <- function(programming_language, min_followers, min_repos){
+  type_user <- 'User'
+  page <- 1
+  results_per_page <- 100
+  url <- sprintf('https://api.github.com/search/users?q=language:%s+repos:>%i+followers:>%i+sort:followers+type:%s&per_page=%i&page=%i', programming_language, min_repos, min_followers, type_user, results_per_page, page)
+  
+  top_developers <- fromJSON(getURL(url, .opts = curl.opts))
+  
+  #Número total de páginas para obtener todos los developers
+  total_pages <- ceiling(top_developers$total_count / results_per_page)
+  
+  if (total_pages > 1){
+    # Append de los nuevos items en list$items
+    top_developers$items <- c(top_developers$items,
+                              do.call('c', lapply(c(2:total_pages), function(i){pagination(url, i)$items})))
+  }
+  
+  return(top_developers$items) 
+}
+
+```
+
+**followers_by_developer**
+
+* Args:
+    + nick: username del developer
+    + min_followers: Condición para la query como mínimo de followers
+    + min_repos : Condición para la query como mínimo de repositorios
+* Return:
+    + Devuelve el número de followers del developer
+* API:
+    + https://developer.github.com/v3/users/followers/#list-followers-of-a-user
+
+```{r}
+followers_by_developer <- function(username_developer){
+  
+  page <- 1
+  results_per_page <- 100
+  number_followers <- 0
+  url <- sprintf('https://api.github.com/users/%s/followers?per_page=%i&page=%i',
+                 username_developer, results_per_page, page)
+  
+  repeat{
+    result_query <- pagination(url,page)
+    
+    if(length(result_query) == 0){
+      break
+    } else {
+      page <- page + 1
+      number_followers <- number_followers + length(result_query)
+    }
+  }
+  
+  return(number_followers)
+}
+```
+
+**repositories_by_developer**
+
+* Args:
+    + developer: username del developer
+    + programming_language: Lenguaje de programación del developer por el que buscamos    
+* Return:
+    + Devuelve lista con el username del developer y el nombre, descripción, url y stars de cada uno de los repositorios del propio developer filtrados por el programming_language indicado
+* API:
+    + https://developer.github.com/v3/repos/#list-user-repositories
+
+```{r}
+repositories_by_developer <- function(username, programming_language){
+  url <- sprintf('https://api.github.com/users/%s/repos', username)
+
+  repos <- fromJSON(getURL(url, .opts = curl.opts))
+  
+  
+  repos <- sapply(repos, function(element){ 
+                            if (!is.null(element$language) && element$language == programming_language){
+                              return(list(username, programming_language, element$name,
+                                          element$description, element$html_url, element$stargazers_count))                              
+                            }})
+
+  return(repos[lapply(repos,length)>0])
+}
+
+```
+
+## Preparación de datos
+
+Creamos un dataset para cada lenguaje añadiendo una columna para identificar el lenguaje con el developer
+
+Dataframe top developers de Python
+
+```{r}
+top_developers_Python <- top_developers_by_language('python', followers, repos)
+df_top_developers_Python <- as.data.frame(do.call('rbind', top_developers_Python))
+df_top_developers_Python <- as.data.frame(sapply(df_top_developers_Python, as.character), 
+                                          stringsAsFactors = FALSE)
+df_top_developers_Python$language <- 'Python'
+```
+
+Dataframe top developers de R
+
+```{r}
+top_developers_R <- top_developers_by_language('R', followers, repos)
+df_top_developers_R <- as.data.frame(do.call('rbind', top_developers_R))
+df_top_developers_R<- as.data.frame(sapply(df_top_developers_R, as.character), 
+                                           stringsAsFactors = FALSE)
+df_top_developers_R$language <- 'R'
+```
+
+Join ambos dataframes por el username
+```{r}
+df_devs <- join(df_top_developers_Python, df_top_developers_R, by='login', type = 'full')
+```
+
+Eliminar filas que no interesan, renombramos columnas y cambiamos el orden de las mismas
+
+```{r}
+df_devs <- df_devs[, c('login', 'html_url', 'followers_url','repos_url', 'language')]
+names(df_devs) <- c('user_name', 'user_page', 'followers_url', 'repos_url', 'language')
+df_devs <- df_devs[, c('language', 'user_name', 'user_page', 'followers_url', 'repos_url')]
+```
+
+Búsqueda del número de followers de cada developer y se añade en una nueva columna
+
+**Este paso tarda varios minutos**
+
+```{r cache=TRUE}
+df_devs$num_followers <- sapply(df_devs$user_name, followers_by_developer)
+```
+
+Ordenamos el dataframe por num_followers
+
+```{r}
+df_devs <- df_devs[order(df_devs$num_followers, decreasing = TRUE), ]
+```
+
+
+Obtenemos la lista de repositorios de cada developer y creamos un dataframe con los repos más
+populares de los developers del dataframe df_devs creado anteriormente
+
+```{r cache=TRUE}
+repositories <- mapply(repositories_by_developer, df_devs$user_name, df_devs$language)
+repositories <- unlist(repositories, recursive = FALSE)
+repositories <- as.data.frame(do.call('rbind', repositories))
+
+#Renombramos filas y columnas
+rownames(repositories) <- 1:nrow(repositories)
+names(repositories) <- c('user_name', 'language', 'name_repo', 'description_repo', 
+                         'url_repo', 'stars_repo')
+
+#Cambiamos tipo de las columnas a character excepto la última (stars_repo) que es tipo integer
+repositories <- as.data.frame(sapply(repositories, as.character), stringsAsFactors = FALSE)
+repositories$stars_repo <- as.integer(repositories$stars_repo)
+
+```
+
+Ordenamos el dataframe por stars_repo
+
+```{r}
+repositories <- repositories[order(repositories$stars_repo, decreasing = TRUE), ]
+```
+
+## Insights
+
+### Top 10 developers agrupados por lenguaje de programación
+
+```{r}
+developers_top_10 <- df_devs[1:10,]
+ggplot(data=developers_top_10, aes(x=reorder(user_name, num_followers), y=num_followers, fill=language)) +
+       geom_bar(stat="identity") + xlab("Developers") + ylab("Followers") + 
+       ggtitle("Top 10 developers by followers") + coord_flip()
+
+```
+
+![developers.jpg](https://github.com/David-Carrasco/Data_Analysis_Github/blob/master/screenshots/developers.jpg "Top 10 Developers")
+
+### Top 10 repositorios agrupados por developer
+
+```{r fig.width=12}
+repositories_top_10 <- repositories[1:10,]
+ggplot(data=repositories_top_10, aes(x=reorder(name_repo, stars_repo), y=stars_repo, fill=user_name)) + 
+       geom_bar(stat="identity") + xlab("Repositories") + ylab("Stars") + 
+       ggtitle("Top 10 repositories by stars of top developers") +
+       theme(text = element_text(size=12)) + coord_flip()
+
+```
+
+![repositories.jpg](https://github.com/David-Carrasco/Data_Analysis_Github/blob/master/screenshots/repos.jpg "Top Repositories")
+
+TODO:
+
+  Add url links to the charts to jump directly to the developer/repository webpage
+
+
+### Bibliografía:
+
+* https://developer.github.com/v3/search/#search-users
+* https://stackoverflow.com/questions/15415485/concatenate-list-of-lists-in-r
+* https://stackoverflow.com/questions/12344982/r-lapply-statement-with-index
+* https://stackoverflow.com/questions/13169305/httr-github-api-callback-url-issues
+* https://stackoverflow.com/questions/12302941/convert-curl-code-into-r-via-the-rcurl-package
+* https://stackoverflow.com/questions/16121463/using-rcurl-httr-for-github-basic-authorization
+* http://www.r-bloggers.com/ggplot2-cheatsheet-for-barplots/
+* http://www.cookbook-r.com/Graphs/Bar_and_line_graphs_(ggplot2)/
+* https://stackoverflow.com/questions/6455088/how-to-put-labels-over-geom-bar-in-r-with-ggplot2
+* https://stackoverflow.com/questions/10941225/horizontal-barplot-in-ggplot2
+* http://www.cookbook-r.com/Graphs/Facets_(ggplot2)/#facet_grid
