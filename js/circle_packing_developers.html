@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<style>
+
+	body
+	{
+		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+		margin: auto;
+		background-color: #FFF;
+		font-weight: 400;
+	}
+
+	circle {
+	  fill: #000;
+	  fill-opacity: .25;
+	  stroke: #777;
+	}
+
+	.final circle{
+	  fill: #000;
+	  fill-opacity: 1;
+	  stroke: #000;
+	}
+
+	text {
+	  cursor: default;
+	  fill: #FFF;
+	  pointer-events: none;
+	}
+	.tooltip{
+		position: absolute;
+		width: 200px;
+		height: 50px;
+		padding: 8px;
+		font: 15px Helvetica Neue;
+		background: #FFF;
+		border: solid 1px #aaa;
+		border-radius: 8px;
+		pointer-events: none;
+		z-order:1000;
+		text-align:center;
+	}
+	.over {
+	  fill: red;
+	}
+
+	</style>
+
+    <head>
+        <meta charset="utf-8">
+        <title>Circle Packing Top Developers</title>
+        <script type="text/javascript" src="d3.v3.js"></script>
+		<link rel="stylesheet" type="text/css" href="simptip.css"/>
+    </head>
+    <body>
+        <script type="text/javascript">
+
+			var diameter = window.innerHeight,
+            width = window.innerWidth,
+            height = window.innerHeight;
+
+			//Layout circle packing
+			var pack = d3.layout.pack()
+						 .size([diameter, diameter])
+						 .value(function(d) { return d.num_followers; });
+
+			//SVG
+			var svg = d3.select("body")
+						.append("svg")
+						.attr("width", width)
+						.attr("height", height)
+						.on("mousemove", mousemove)
+						.call(d3.behavior.zoom().on("zoom", redraw))
+						.append("g");						
+			
+			var tooltip =  d3.select("body").append("div")
+				.attr("id","tooltip")
+				.html("")
+				.attr("class", "tooltip")
+				.style("opacity", 0);
+
+			var colorScale = d3.scale.category10();
+				
+			function mousemove()
+			{
+				tooltip
+					.style("left", (d3.event.pageX +20) + "px")
+					.style("top", (d3.event.pageY - 12) + "px");
+			}
+			
+			function redraw()
+			{
+				svg.attr("transform",
+							  "translate(" + d3.event.translate + ")"
+							  + " scale(" + d3.event.scale + ")");
+			}
+					
+			//Carga datos del dataframe a traves de un csv y preparamos la hierarchy
+			d3.csv('sample_topdevelopers_090215.csv', function(csv) {
+			    
+				//Clasificacion de los bubbles por lenguaje de programacion
+				var data = { name: "language", children: csv };
+				
+				// Pintamos los g en el circle packing
+				var node = svg.data([data]).selectAll(".node")
+						      .data(pack.nodes)			
+						      .enter()
+						      .append("g")
+						      .attr("class", "node")
+						      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+				
+				// Aniadimos a las estructuras g los circles y el link del developer en github
+				node.append('circle')
+					.attr("r", function(d) { return d.r; })
+					.style("fill", function(d) { return colorScale(d.language); })
+					.attr('href', function(d){return d.user_page;});	
+					/*
+					on('click', function (d){})
+					*/			
+				
+				//Escribimos el user_name de cada developer en cada circle
+				node.append("text")
+					.attr("text-anchor","middle")
+					.style("fill-opacity",1)
+					.style("font-size","10px")
+					.text(function(d) { return d.user_name; });
+				
+			   });
+				
+
+			
+        </script>
+    </body>
+	
+	<!--
+	<p>
+		<span class="simptip-position-bottom" data-tooltip="Tooltip's content"> Text </span>
+	</p>
+	-->
+	
+</html>
