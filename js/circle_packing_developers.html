@@ -103,7 +103,7 @@
 				var data = { name: "language", children: csv };
 				
 				// Pintamos los g en el circle packing
-				var node = svg.data([data]).selectAll(".node")
+				var node = svg.data([data]).selectAll("group")
 						      .data(pack.nodes)			
 						      .enter()
 						      .append("g")
@@ -114,17 +114,18 @@
 				node.append('circle')
 					.attr("r", function(d) { return d.r; })
 					.style("fill", function(d) { return colorScale(d.language); })
-					.attr('href', function(d){return d.user_page;});	
-					/*
-					on('click', function (d){})
-					*/			
+					.on("mouseover", function(d){
+						if(d.depth != 0){
+							d3.select(this).style("cursor","pointer")}})
+					.on("mouseout", function(d){d3.select(this).style("cursor","default")})
+					.on("click", function (d){window.open(d.user_page,'_blank')});					
 				
 				//Escribimos el user_name de cada developer en cada circle
 				node.append("text")
 					.attr("text-anchor","middle")
 					.style("fill-opacity",1)
 					.style("font-size","10px")
-					.text(function(d) { return d.user_name; });
+					.text(function(d) { return d.user_name; });	
 				
 			   });
 				
