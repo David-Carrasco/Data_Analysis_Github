@@ -30,8 +30,8 @@
 	}
 	.tooltip{
 		position: absolute;
-		width: 200px;
-		height: 50px;
+		width: 500px;
+		height: 300px;
 		padding: 8px;
 		font: 15px Helvetica Neue;
 		background: #FFF;
@@ -116,9 +116,13 @@
 					.style("fill", function(d) { return colorScale(d.language); })
 					.on("mouseover", function(d){
 						if(d.depth != 0){
-							d3.select(this).style("cursor","pointer")}})
-					.on("mouseout", function(d){d3.select(this).style("cursor","default")})
-					.on("click", function (d){window.open(d.user_page,'_blank')});					
+							d3.select(this).style("cursor","pointer");}})
+					.on("mouseout", function(d){
+						if(d.depth != 0){
+							d3.select(this).style("cursor","default");}})
+					.on("click", function (d){
+						if(d.depth != 0){
+							window.open(d.user_page,'_blank')}});					
 				
 				//Escribimos el user_name de cada developer en cada circle
 				node.append("text")
