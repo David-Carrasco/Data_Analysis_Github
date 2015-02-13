@@ -63,7 +63,8 @@
 			//Layout circle packing
 			var pack = d3.layout.pack()
 						 .size([diameter, diameter])
-						 .value(function(d) { return d.num_followers; });
+						 .value(function(d) { return d.num_followers; })
+						 .children(function(d){return d.values});
 
 			//SVG
 			var svg = d3.select("body")
@@ -97,10 +98,13 @@
 			}
 					
 			//Carga datos del dataframe a traves de un csv y preparamos la hierarchy
-			d3.csv('sample_topdevelopers_090215.csv', function(csv) {
+			//Consideramos la información recabada el 09/02/2015 y que cada developer tenga 500 followers minimo
+			d3.csv('topdevelopers_090215_more_500_followers.csv', function(csv) {
 			    
 				//Clasificacion de los bubbles por lenguaje de programacion
-				var data = { name: "language", children: csv };
+				var data = { key: "language", values: d3.nest()
+														.key(function(d) { return d.language; })
+														.entries(csv)};				
 				
 				// Pintamos los g en el circle packing
 				var node = svg.data([data]).selectAll("group")
@@ -115,13 +119,13 @@
 					.attr("r", function(d) { return d.r; })
 					.style("fill", function(d) { return colorScale(d.language); })
 					.on("mouseover", function(d){
-						if(d.depth != 0){
+						if(d.depth > 1){
 							d3.select(this).style("cursor","pointer");}})
 					.on("mouseout", function(d){
-						if(d.depth != 0){
+						if(d.depth > 1){
 							d3.select(this).style("cursor","default");}})
 					.on("click", function (d){
-						if(d.depth != 0){
+						if(d.depth > 1){
 							window.open(d.user_page,'_blank')}});					
 				
 				//Escribimos el user_name de cada developer en cada circle
@@ -137,11 +141,4 @@
 			
         </script>
     </body>
-	
-	<!--
-	<p>
-		<span class="simptip-position-bottom" data-tooltip="Tooltip's content"> Text </span>
-	</p>
-	-->
-	
 </html>
