@@ -28,19 +28,6 @@
 	  fill: #FFF;
 	  pointer-events: none;
 	}
-	.tooltip{
-		position: absolute;
-		width: 500px;
-		height: 300px;
-		padding: 8px;
-		font: 15px Helvetica Neue;
-		background: #FFF;
-		border: solid 1px #aaa;
-		border-radius: 8px;
-		pointer-events: none;
-		z-order:1000;
-		text-align:center;
-	}
 	.over {
 	  fill: red;
 	}
@@ -50,8 +37,7 @@
     <head>
         <meta charset="utf-8">
         <title>Circle Packing Top Developers</title>
-        <script type="text/javascript" src="d3.v3.js"></script>
-		<link rel="stylesheet" type="text/css" href="simptip.css"/>
+        <script type="text/javascript" src="js/d3.v3.js"></script>
     </head>
     <body>
         <script type="text/javascript">
@@ -59,6 +45,10 @@
 			var diameter = window.innerHeight,
             width = window.innerWidth,
             height = window.innerHeight;
+			
+			//Variable con dataset utilizado
+			//Consideramos la información recabada el 09/02/2015 y que cada developer tenga 500 followers minimo
+			var dataset = 'topdevelopers_090215_more_500_followers.csv'
 
 			//Layout circle packing
 			var pack = d3.layout.pack()
@@ -71,24 +61,33 @@
 						.append("svg")
 						.attr("width", width)
 						.attr("height", height)
-						.on("mousemove", mousemove)
 						.call(d3.behavior.zoom().on("zoom", redraw))
-						.append("g");						
-			
-			var tooltip =  d3.select("body").append("div")
-				.attr("id","tooltip")
-				.html("")
-				.attr("class", "tooltip")
-				.style("opacity", 0);
+						.append("g");
+						
+			//Aniadimos patterns para las imagenes background de fondo utilizando
+			//el array con las urls de las imagenes guardadas			
+			var icons = [{key: 'github', url: 'img/github_logo.jpg'}, 
+			    		 {key: 'Python', url: 'img/python.png'},
+						 {key: 'R', url: 'img/R.jpg'}];
 
-			var colorScale = d3.scale.category10();
-				
-			function mousemove()
-			{
-				tooltip
-					.style("left", (d3.event.pageX +20) + "px")
-					.style("top", (d3.event.pageY - 12) + "px");
-			}
+			var defs = d3.select("svg")
+						 .append("defs")
+
+			d3.select('defs').selectAll("pattern")
+						     .data(icons)
+						     .enter()
+							 .append('pattern')
+						     .attr('id',function(d){ return d.key;})
+						     .attr('patternContentUnits', 'objectBoundingBox')
+						     .attr('height', '100%')
+						     .attr('width', '100%')
+					         .append('image')
+						     .attr('preserveAspectRatio', 'xMidYMid slice')
+						     .attr('height', '1')
+						     .attr('width', '1')
+						     .attr('xlink:href', function(d){ return d.url});
+			
+			var colorScale = d3.scale.category10();	
 			
 			function redraw()
 			{
@@ -98,15 +97,15 @@
 			}
 					
 			//Carga datos del dataframe a traves de un csv y preparamos la hierarchy
-			//Consideramos la información recabada el 09/02/2015 y que cada developer tenga 500 followers minimo
-			d3.csv('topdevelopers_090215_more_500_followers.csv', function(csv) {
+			d3.csv(dataset, function(csv) {
 			    
 				//Clasificacion de los bubbles por lenguaje de programacion
+				// y tamanio en base a el numero de followers de cada developer
 				var data = { key: "language", values: d3.nest()
 														.key(function(d) { return d.language; })
 														.entries(csv)};				
 				
-				// Pintamos los g en el circle packing
+				// Aniadimos los g en el circle packing
 				var node = svg.data([data]).selectAll("group")
 						      .data(pack.nodes)			
 						      .enter()
@@ -115,30 +114,41 @@
 						      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
 				
 				// Aniadimos a las estructuras g los circles y el link del developer en github
+				// Aplicamos la logica de mouseover y mouseout para mostrar o esconder el icon, respectivamente
 				node.append('circle')
 					.attr("r", function(d) { return d.r; })
 					.style("fill", function(d) { return colorScale(d.language); })
 					.on("mouseover", function(d){
-						if(d.depth > 1){
-							d3.select(this).style("cursor","pointer");}})
+						if(d.depth == 2){
+							d3.select(this).style("cursor","pointer");}
+						else if (d.depth == 1){	
+							d3.select(this).style("fill", "url(#"+ d.key +")");						
+							d3.select(this).style("fill-opacity", 1);
+							}
+						else if (d.depth == 0){
+							d3.select(this).style("fill", "url(#github)");
+							d3.select(this).style("fill-opacity", 1);
+							}})
 					.on("mouseout", function(d){
-						if(d.depth > 1){
-							d3.select(this).style("cursor","default");}})
+						if(d.depth == 2){
+							d3.select(this).style("cursor","default");}
+						else {
+							d3.select(this).style("fill-opacity", null);
+							d3.select(this).style("fill", function(d) { return colorScale(d.language); })						
+							}})
 					.on("click", function (d){
-						if(d.depth > 1){
-							window.open(d.user_page,'_blank')}});					
+						if(d.depth == 2){
+							window.open(d.user_page, '_blank')}});
 				
 				//Escribimos el user_name de cada developer en cada circle
 				node.append("text")
 					.attr("text-anchor","middle")
 					.style("fill-opacity",1)
 					.style("font-size","10px")
+					.style("fill", "black")
 					.text(function(d) { return d.user_name; });	
 				
 			   });
-				
-
-			
         </script>
-    </body>
+	</body>
 </html>
