@@ -17,8 +17,8 @@ Vamos a suponer que para ser un trending developer en R y/o Python se han de ten
 #### Indicar credenciales de usuario de github para poder ejecutar correctamente todo el script
 
 ```{r}
-user_github = 'david-carrasco'
-pass_github = 'davecray5250'
+user_github = '________'
+pass_github = '________'
 ```
 
 Opciones para la conexión con la API a través de RCurl
